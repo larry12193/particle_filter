@@ -19,6 +19,9 @@
  */
 #define PIXEL_RESOLUTION 10
 
+#define MAP_HEIGHT 800
+#define MAP_WIDTH  800
+
 /**
  * @brief Data log delimeter
  */
@@ -38,9 +41,9 @@ static const std::string delimeter = " ";
  * @brief Probabilistic value associated with occupied, unoccupied, and
  *        unmapped values in the map
  */
-#define OCCUPIED 1
+#define OCCUPIED 1.0
 #define UNOCCUPIED 0
-#define UNMAPPED -1
+#define UNMAPPED -1.0
 
 /**
  * @brief Odometry entry column headers

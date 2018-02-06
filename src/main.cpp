@@ -7,8 +7,7 @@
  */
 
 #include "logReader.h"
-
-#include <inttypes.h>
+#include "particleFilter.h"
 #include <boost/program_options.hpp>
 
 #define BOLDBLUE "\033[1m\033[94m"
@@ -44,14 +43,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Initialize log file reader
-    LogReader dataReader(dataPath);
-
     std::cout << BOLDBLUE << "Processing " << dataPath << ENDC << std::endl;
     std::cout << BOLDBLUE << "Generating output in " << outputPath << ENDC << std::endl;
 
-    dataReader.increment(&currentData);
-    dataReader.increment(&currentData);
+    // Create instance of particle filter solver
+    ParticleFilter pf(dataPath, outputPath);
+
+    pf.solve();
 
     return 0;
 }

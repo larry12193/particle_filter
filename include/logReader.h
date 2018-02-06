@@ -59,7 +59,7 @@ public:
      *  @return Void.
      */
     LogReader(std::string logFile);
-
+    
     /** @brief Deconstructor for LogReader classs
      *
      */
