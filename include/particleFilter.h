@@ -12,15 +12,15 @@
 #include "robotdata.h"
 #include "logReader.h"
 #include "visualizer.h"
+#include "particle.h"
 
-#define NUM_PARTICLES 100
+#include <fstream>
+#include <cstdlib>
+#include <inttypes.h>
+#include <ctime>
 
-struct particle_t {
-    double x;
-    double y;
-    double theta;
-    double weight;
-} __attribute__((packed));
+
+static const std::string open_data = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/data/map/open_map.dat";
 
 class ParticleFilter {
 
@@ -30,11 +30,14 @@ public:
 
     void solve();
 
+    void generateParticles();
+
 private:
 
     void motionModel(particle_t *particle);
-    void resampleParticles();
 
+    uint16_t generateEmptyParticleSample();
+    double generateThetaSample();
 private:
 
     /**
@@ -52,6 +55,8 @@ private:
     LogReader *dataReader;
 
     Visualizer *visualizer;
+
+    std::ifstream _openFD;
 };
 
  #endif /* _PARTICLE_FILTER_H */

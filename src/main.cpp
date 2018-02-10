@@ -49,7 +49,9 @@ int main(int argc, char *argv[]) {
     // Create instance of particle filter solver
     ParticleFilter pf(dataPath, outputPath);
 
-    pf.solve();
+    pf.generateParticles();
+
+    std::getchar();
 
     return 0;
 }

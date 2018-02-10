@@ -7,6 +7,7 @@
 
 
 #include "visualizer.h"
+#include "robotdata.h"
 
 Visualizer::Visualizer() {
 
@@ -14,6 +15,10 @@ Visualizer::Visualizer() {
     mapTexture = new sf::Texture;
     mapTexture->create(MAP_WIDTH, MAP_HEIGHT);
     mapSprite  = new sf::Sprite;
+    figThread = new sf::Thread(&Visualizer::renderThread,this);
+
+    arrowTexture = new sf::Texture;
+    arrowTexture->loadFromFile(arrow_file);
 
     // Load map and interpret as pixel data
     loadMap();
@@ -91,17 +96,33 @@ void Visualizer::loadMap() {
     mapTexture->update(mapPixels);
     // Load texture into sprite
     mapSprite->setTexture(*mapTexture);
-
-    // Create thread to update the window
-    boost::thread thread(boost::bind(&Visualizer::window_thread,this));
+    //boost::thread thread(boost::bind(&Visualizer::window_thread,this));
     // Join thread
-    thread.join();
+    //thread.join();
 }
 
-void Visualizer::window_thread() {
-
+void Visualizer::renderThread() {
     while( window->isOpen()) {
         window->draw(*mapSprite);
+        for( int i = 0; i < NUM_PARTICLES; i++ ) {
+            window->draw(arrowSprites[i]);
+        }
         window->display();
     }
+}
+
+void Visualizer::drawParticles(particle_t *X) {
+    for( int i = 0; i < NUM_PARTICLES; i++ ) {
+        arrowSprites[i].setTexture(*arrowTexture);
+        arrowSprites[i].setOrigin(300,300);
+        arrowSprites[i].setRotation(X->theta);
+        arrowSprites[i].setPosition(X->y/PIXEL_RESOLUTION,X->x/PIXEL_RESOLUTION);
+        arrowSprites[i].setScale(0.035,0.035);
+        X++;
+    }
+}
+
+void Visualizer::viewImage() {
+    // Create thread to update the window
+    figThread->launch();
 }

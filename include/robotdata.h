@@ -14,6 +14,11 @@
 
 #include <string>
 
+#define PI  3.14159265359
+#define PI2 6.28318530718
+
+#define NUM_PARTICLES 100
+
 /**
  * @brief Pixel size resolution (cm)
  */
@@ -21,6 +26,11 @@
 
 #define MAP_HEIGHT 800
 #define MAP_WIDTH  800
+
+#define ARROW_WIDTH  600
+#define ARROW_HEIGHT 600
+
+#define NUM_FREE 31284
 
 /**
  * @brief Data log delimeter
