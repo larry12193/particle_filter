@@ -29,13 +29,12 @@ ParticleFilter::ParticleFilter(std::string dataPath, std::string outputPath) {
     this->loadLogicalMap();
 
     // Generate inital particle set
-    // this->generateParticles();
-    _X[0].x = 39.6;//61.7;
-    _X[0].y = 38.1;//65.0;
-    _X[0].theta = 0.0;
-    memcpy(_Xbar,_X,sizeof(_X));
-    _visualizer->drawParticles(&_X[0]);
-    _visualizer->viewImage();
+    this->generateParticles();
+    // _X[0].y = 61.8;
+    // _X[0].x = 65.4;
+    // _X[0].theta = 0.0;
+    // _visualizer->drawParticles(&_X[0]);
+    // _visualizer->viewImage();
 
     // Flag first measurement
      _firstMeasurement = true;
@@ -57,18 +56,18 @@ void ParticleFilter::solve() {
                 _lastData = _data;
                 _firstMeasurement = false;
             } else {
-
+                // Propogate points using odometry
+                applyMotionModel();
+                // Find importance weights based on sensor model
                 findImportanceWeights();
-                // // Propogate points using odometry
-                // applyMotionModel();
-                // // Find importance weights based on sensor model
-                // findImportanceWeights();
-                // for( int i = 0; i < NUM_PARTICLES; i++ ) {
-                //     std::cout << "Xbar" << i <<  " weight = " << _Xbar[i].weight << std::endl;
-                // }
-                // // Resample particles
-                // resampleParticles();
-                // _visualizer->drawParticles(&_X[0]);
+    #ifdef DEBUG
+                for( int i = 0; i < NUM_PARTICLES; i++ ) {
+                    std::cout << "Xbar" << i <<  " weight = " << _Xbar[i].weight << std::endl;
+                }
+    #endif
+                // Resample particles
+                resampleParticles();
+                _visualizer->drawParticles(&_X[0]);
 
                 // Save last data frame for next update
                 _lastData = _data;
@@ -110,13 +109,13 @@ void ParticleFilter::generateParticles() {
         // Extract substring bounded by delimeter
         token = line.substr(0,pos);
         // Load data into current memory location
-        _X[i].y = std::atof(token.c_str()) * PIXEL_RESOLUTION;
+        _X[i].x = std::atof(token.c_str()) * PIXEL_RESOLUTION;
 
         // Remove data from string
         line.erase(0,pos+delimeter.size());
 
         // Load data into current memory location
-        _X[i].x = std::atof(line.c_str()) * PIXEL_RESOLUTION;
+        _X[i].y = std::atof(line.c_str()) * PIXEL_RESOLUTION;
 
         // Generate theta estimate
         _X[i].theta = generateThetaSample();
@@ -235,18 +234,11 @@ void ParticleFilter::initializeModels() {
 }
 
 void ParticleFilter::loadLogicalMap() {
-
-    // std::ofstream outfd;
-    // outfd.open("/home/lawrence/Desktop/out.txt", std::ifstream::out);
-
     std::ifstream fd;
     fd.open(map_data.c_str(),std::ifstream::in);
     size_t pos = 0;
     std::string token, line;
-    int row, col;
-    row = 0;
-    col = 0;
-    float data;
+    float* data = &_logicMap[0];
 
     bool dataValid = true;
     while( getline(fd,line) ) {
@@ -261,59 +253,79 @@ void ParticleFilter::loadLogicalMap() {
             token = line.substr(0,pos);
 
             // Load data into current memory location
-            data = std::atof(token.c_str());
-            _logicMap[row][col] = data;
-            col++;
+            (*data) = std::atof(token.c_str());
+            // Move to next memory location
+            data++;
+
             // Remove data from string
             line.erase(0,pos+delimeter.size());
         }
-        row++;
-        col = 0;
-        // outfd << std::endl;;
         dataValid = true;
     }
-
-    // for( int x = 1; x <= MAP_HEIGHT; x++ ) {
-    //     for( int y = 1; y <= MAP_WIDTH; y++ ) {
-    //         outfd << _logicMap[MAP_HEIGHT*(x-1) + y - 1] << " ";
-    //     }
-    //     outfd << std::endl;
-    // }
-    fd.close();
-    // outfd.close();
 }
 
 void ParticleFilter::applyMotionModel() {
+    double r1,r2,tr;
+    double r1h,r2h,trh;
 
-    double dx, dy, dth;
-    double r1, r2, trans, r1h, r2h, transh;
+    double dx  = _data.laserData.robotX - _lastData.laserData.robotX;
+    double dy  = _data.laserData.robotY - _lastData.laserData.robotY;
+    double dth = _data.laserData.robotTheta - _lastData.laserData.robotTheta;
 
-    dx  = _data.laserData.robotX     - _lastData.laserData.robotX;
-    dy  = _data.laserData.robotY     - _lastData.laserData.robotY;
-    dth = _data.laserData.robotTheta - _lastData.laserData.robotTheta;
+    if( dx != 0.0 && dy != 0.0 && dth != 0 ) {
+    #ifdef DEBUG
+        std::cout << "dx = " << dx << " dy = " << dy << " dth = " << dth << std::endl;
+        getchar();
+    #endif
 
-    if( dx == 0 && dy == 0 && dth == 0 ) {
-        // Copy data over from last set of particles
-        memcpy(_Xbar,_X,sizeof(_Xbar));
-    } else {
-        // Run over particles and apply odometry model
+        memcpy(_lastX,_X,sizeof(_lastX));
+
+    #ifdef DEBUG
+        std::cout << "lX = " << _lastX[0].x << " lY = " << _lastX[0].y << " lTh = " << _lastX[0].theta << std::endl;
+        getchar();
+    #endif
+
         for( int i = 0; i < NUM_PARTICLES; i++ ) {
-            r1    = atan2(dy,dx) - _X[i].theta;
-            trans = sqrt(dx*dx + dy*dy);
-            r2    = dth - r1;
-            printf("r1 = %f, trans = %f, r2 = %f\n", r1,trans,r2);
 
-            reinitializeOdometryGaussians(r1, r2, trans);
+            _Xbar[i].x = _lastX[i].x + dx;
+            _Xbar[i].y = _lastX[i].y + dy;
+            _Xbar[i].theta = _lastX[i].theta + dth;
 
-            r1h    = r1    - (*_odomModel.rotModel.gaussian)(*_rngen);
-            transh = trans - (*_odomModel.transModel.gaussian)(*_rngen);
-            r2h    = r2    - (*_odomModel.rotModel.gaussian)(*_rngen);
-            printf("r1h = %f, transh = %f, r2h = %f\n", r1h,transh,r2h);
+    #ifdef DEBUG
+            std::cout << "bX = " << _Xbar[i].x << " bY = " << _Xbar[i].y << " bTh = " << _Xbar[i].theta << std::endl;
+            getchar();
+    #endif
 
-            _Xbar[i].x = _X[i].x + transh*cos(_X[i].theta + r1h);
-            _Xbar[i].y = _X[i].y + transh*sin(_X[i].theta + r1h);
-            _Xbar[i].theta = _X[i].theta + r1h + r2h;
-            printf("X = %f, Y = %f, Th = %f\n", _Xbar[i].x,_Xbar[i].y,_Xbar[i].theta);
+            r1 = atan2(_Xbar[i].y - _lastX[i].y,_Xbar[i].x - _lastX[i].x) - _lastX[i].theta;
+            dx = _lastX[i].x - _Xbar[i].x;
+            dy = _lastX[i].y - _Xbar[i].y;
+            tr = sqrt(dx*dx + dy*dy);
+            r2 = _Xbar[i].theta - _lastX[i].theta - r1;
+
+    #ifdef DEBUG
+            std::cout << "r1 = " << r1 << " tr = " << tr << " r2 = " << r2 << std::endl;
+            getchar();
+    #endif
+
+            reinitializeOdometryGaussians(r1,r2,tr);
+
+            r1h = r1 - (*_odomModel.rotModel.gaussian)(*_rngen);
+            trh = tr - (*_odomModel.transModel.gaussian)(*_rngen);
+            r2h = r2 - (*_odomModel.rotModel.gaussian)(*_rngen);
+
+    #ifdef DEBUG
+            std::cout << "r1h = " << r1h << " trh = " << trh << " r2h = " << r2h << std::endl;
+            getchar();
+    #endif
+
+            _Xbar[i].x = _lastX[i].x + trh*cos(_lastX[i].theta + r1h);
+            _Xbar[i].y = _lastX[i].y + trh*sin(_lastX[i].theta + r1h);
+            _Xbar[i].theta = _lastX[i].theta + r1h + r2h;
+
+    #ifdef DEBUG
+            std::cout << "Xx = " << _Xbar[i].x << " Xy = " << _Xbar[i].y << " Xth = " << _Xbar[i].theta << std::endl;
+            getchar();
+    #endif
         }
     }
 }
@@ -490,101 +502,82 @@ void ParticleFilter::plotNoiseTrajectory() {
 }
 
 void ParticleFilter::reinitializeOdometryGaussians(double r1, double r2, double tr) {
-    _odomModel.rotModel.gaussian   = new std::normal_distribution<double>(0,_odomModel.a1*r1*r1 + _odomModel.a2*tr*tr);
+    _odomModel.rotModel.gaussian = new std::normal_distribution<double>(0,_odomModel.a1*r1*r1 + _odomModel.a2*r2*r2);
     _odomModel.transModel.gaussian = new std::normal_distribution<double>(0,_odomModel.a3*tr*tr + _odomModel.a4*r1*r1 + _odomModel.a4*r2*r2);
 }
 
 void ParticleFilter::findImportanceWeights() {
-
-    double zmap;
-
     // Iterate over all particles
-    for(int p = 0; p < NUM_PARTICLES; p++ ) {
-        // Initialize particle weight
+    for( int p = 0; p < NUM_PARTICLES; p++ ) {
+        // Initialize firs theta as 90 degrees to the left
+        double th = -90;
+
         _Xbar[p].weight = 1;
+
         // Iterate over all ranges
-        for(int th = -90; th < 90; th+=5 ) {
+        for( int i = 0; i < NUM_MEAS; i+=5 ) {
+            // Run ray tracer to find expected value from map
+            _laserModel.hit.mean = traceMap(_Xbar[p],th)*METER_TO_CM;
 
-            // Trace map to find particle's true measurement and update laser model
-            zmap = rayTrace(_Xbar[p], th*TO_RADIANS);
-            // Update laser model mean value with true measurement
-            _laserModel.hit.mean = zmap;
+            // Calculate weight
+            _Xbar[p].weight *= laserModelProb(&_data.laserData.ranges[i]);
+#ifdef DEBUG
+            std::cout << "_Xbar.weight = " << _Xbar[p].weight << std::endl;
+#endif
 
-            // Add probability of measurement to entire particle weight
-            _Xbar[p].weight = _Xbar[p].weight*laserModelProb(_data.laserData.ranges[NUM_MEAS+th]*CM_TO_METERS);
-
-            printf("th = %d",th);
+            // Inrement to new theta (skipping some measurements)
+            th += 5;
         }
     }
 }
 
-double ParticleFilter::rayTrace(particle_t p, double angle) {
-    double endX, endY, lastX, lastY, d;
-
-    // Intialize the search distance
-    d = SEARCH_DIST;
-
-    // Calculate the endpoint (in meters) of search line
-    endX = p.x + LASER_OFFSET_X*cos(p.theta) + d*cos(p.theta+angle);
-    endY = p.y + LASER_OFFSET_X*sin(p.theta) + d*sin(p.theta+angle);
-
-    printf("ENDX = %f, ENDY = %f\n",endX,endY);
-    // Run trace while a wall is not found
-    int ret = spaceUnoccupied(endX,endY);
-    printf("ret = %d\n",ret);
-    while( ret > 0 ) {
-        d += SEARCH_DIST;
-        endX = p.x + LASER_OFFSET_X*cos(p.theta) + d*cos(p.theta+angle);
-        endY = p.y + LASER_OFFSET_X*sin(p.theta) + d*sin(p.theta+angle);
-        ret = spaceUnoccupied(endX,endY);
-        printf("ret = %d\n",ret);
-        getchar();
+double ParticleFilter::traceMap(particle_t p, double angle) {
+    double endX = 0;
+    double endY = 0;
+    double d = 0;
+    bool wallFound = false;
+#ifdef DEBUG
+    std::cout << "angle = " << angle << std::endl;
+#endif
+    // Run until wall or max range found
+    while( !wallFound && d*METER_TO_CM < _laserModel.max ) {
+        // Increment distance to search over
+        d += D_DIST;
+#ifdef DEBUG
+        std::cout << "d = " << d << std::endl;
+#endif
+        // Calculate new position (in meters)
+        endY = p.x + d*sin((p.theta+angle*TO_RADIANS));
+        endX = p.y + d*cos((p.theta+angle*TO_RADIANS));
+        //std::cout << "START(" << p.y << "," << p.x <<")" << std::endl;
+        //std::cout << "END(" << endX << "," << endY <<")" << std::endl;
+        _visualizer->flagPixel(endX,endY);
+        // Check if pixel is occupied in map
+        if( spaceOccupied(endX,endY) ) {
+            wallFound = true;
+            // // Cycle back until transition found
+            // while( spaceOccupied(endX, endY)) {
+            //     d -= 0.01;
+            //     endX = p.y + d*cos((p.theta+angle*TO_RADIANS));
+            //     endY = p.x + d*sin((p.theta+angle*TO_RADIANS));
+            //     _visualizer->flagPixel(endX,endY);
+            // }
+            return d;
+        }
     }
-
-    if( ret > 0 ) {
-        double dx, dy;
-        dx = endX - (p.x + LASER_OFFSET_X*cos(p.theta));
-        dy = endY - (p.y + LASER_OFFSET_X*sin(p.theta));
-        return sqrt(dx*dx + dy*dy);
-    } else {
-        return -1;
-    }
-    // for( int i = 0; i < 30; i ++) {
-    //     d += SEARCH_DIST;
-    //     endX = p.x + d*cos(p.theta+angle) + LASER_OFFSET_X*cos(p.theta);
-    //     endY = p.y + d*sin(p.theta+angle) + LASER_OFFSET_X*sin(p.theta);
-    //     _visualizer->flagPixel(endX/PIXEL_RESOLUTION,endY/PIXEL_RESOLUTION);
-    //     getchar();
-    // }
-
 }
 
-int ParticleFilter::spaceUnoccupied(double x, double y) {
-
-    int px, py;
-    // Convert xy position to pixel value, correcting for pixels starting at (1,1)
-    // which equates to (0.0,0.0) in world coordinates
-    px = (int)(x/PIXEL_RESOLUTION);
-    py = (int)(y/PIXEL_RESOLUTION);
-
+bool ParticleFilter::spaceOccupied(int x, int y) {
     // Check if space is free
-    printf("X = %f, Y = %f",x,y);
-    printf("PX = %d, PY = %d\n",px,py);
-    _visualizer->flagPixel(x,y);
-    getchar();
-
-    // int ind = (MAP_HEIGHT*(x-1.0) + y - 1.0);
-    // printf("Ind = %d, map = %f\n",ind,_logicMap[ind]);
-    // Make sure target is within range
-    if( px*py < MAP_HEIGHT*MAP_WIDTH ) {
-        printf("logicMap = %f", _logicMap[py][px]);
-        // Check if the pixel probability is less than a half (meaning more likely unoccupied)
-        if( _logicMap[py][px] > 0.5 ) {
-            return 1;
+    // std::cout << "Checking " << "X(" << x << ") Y(" << y << ")" << std::endl;
+    x = x/PIXEL_RESOLUTION;
+    y = y/PIXEL_RESOLUTION;
+    if( (MAP_HEIGHT*y + x) < MAP_HEIGHT*MAP_WIDTH ) {
+        if( _logicMap[MAP_HEIGHT*y + x] >= 0.5 ) {
+            return false;
         }
-        return 0;
     }
-    return -1;
+    return true;
 }
 
 uint16_t ParticleFilter::generateEmptyParticleSample() {
@@ -623,40 +616,49 @@ double ParticleFilter::integrateGaussian(double* zstar) {
     return _laserModel.max/(2*NUM_BINS)*(_y[0] + sum + _y[NUM_BINS]);
 }
 
-double ParticleFilter::laserModelProb(double zmeas) {
+double ParticleFilter::laserModelProb(double* zmeas) {
     double p, temp;
-    p = 0;
-    temp = 0;
+
     // Handle hit probability
-    if( zmeas >= 0 && zmeas <= _laserModel.max ) {
+    if( (*zmeas) >= 0 && (*zmeas) <= _laserModel.max ) {
         temp = evaluateGaussian(zmeas);
+#ifdef DEBUG
+        std::cout << "phit = " << _laserModel.hitFactor*temp;
+#endif
         p += _laserModel.hitFactor*temp;
-        printf("phit = %f", _laserModel.hitFactor*temp);
     }
     // Handle short probability
-    if( zmeas >= 0 && zmeas <= _laserModel.hit.mean ) {
-        temp = _laserModel.shrt.lambda*exp(-_laserModel.shrt.lambda*zmeas);
+    if( (*zmeas) >= 0 && (*zmeas) <= _laserModel.hit.mean ) {
+        temp = exp(-_laserModel.shrt.lambda*(*zmeas));
+#ifdef DEBUG
+        std::cout << " pshrt = " << _laserModel.shrtFactor*temp;
+#endif
         p += _laserModel.shrtFactor*temp;
-        printf(" pshrt = %f", _laserModel.shrtFactor*temp);
     }
 
     // Handle max range probability
-    if( zmeas == _laserModel.max ) {
+    if( (*zmeas) == _laserModel.max ) {
+#ifdef DEBUG
+        std::cout << " pmax = " << _laserModel.maxFactor;
+#endif
         p += _laserModel.maxFactor;
-        printf(" pmax = %f", _laserModel.maxFactor);
     }
 
     // Handle random measurement probability
-    if( zmeas >= 0 && zmeas < _laserModel.max ) {
+    if( (*zmeas) >= 0 && (*zmeas) < _laserModel.max ) {
+#ifdef DEBUG
+        std::cout << " prand = " << _laserModel.randFactor*_laserModel.rand;
+#endif
         p += _laserModel.randFactor*_laserModel.rand;
-        printf(" prand = %f\n", _laserModel.randFactor*_laserModel.rand);
     }
-    printf("p = %f\n",p);
+#ifdef DEBUG
+    std::cout << " ptotal = " << p << std::endl;
+#endif
     return p;
 }
 
-double ParticleFilter::evaluateGaussian(double eval) {
-    return (1/(sqrt(PI2*pow(_laserModel.hit.std,2))))*exp(-0.5*pow((eval-_laserModel.hit.mean),2))/pow(_laserModel.hit.std,2);
+double ParticleFilter::evaluateGaussian(double* eval) {
+    return (1/(sqrt(PI2*pow(_laserModel.hit.std,2))))*exp(-0.5*pow(((*eval)-_laserModel.hit.mean),2))/pow(_laserModel.hit.std,2);
 }
 
 void ParticleFilter::visualizeLaserModel() {
@@ -666,7 +668,7 @@ void ParticleFilter::visualizeLaserModel() {
     calculateLaserNomralizers(&_laserModel.hit.mean);
     for( int i = 0; i < 1000; i++ ) {
         z.at(i) = ((double)i/1000)*_laserModel.max;
-        p.at(i) = laserModelProb(z.at(i));
+        p.at(i) = laserModelProb(&z.at(i));
     }
 
     // Plot line from given x and y data. Color is selected automatically.

@@ -11,6 +11,7 @@
 
 Visualizer::Visualizer() {
 
+    _drawDot = false;
     window = new sf::RenderWindow(sf::VideoMode(MAP_WIDTH, MAP_HEIGHT), "Particle Filter");
     mapTexture = new sf::Texture;
     mapTexture->create(MAP_WIDTH, MAP_HEIGHT);
@@ -19,6 +20,9 @@ Visualizer::Visualizer() {
 
     arrowTexture = new sf::Texture;
     arrowTexture->loadFromFile(arrow_file);
+
+    dotTexture = new sf::Texture;
+    dotTexture->loadFromFile(dot_file);
 
     // Load map and interpret as pixel data
     loadMap();
@@ -30,15 +34,22 @@ Visualizer::~Visualizer() {
 
 void Visualizer::loadMap() {
 
-    // Define pixel value array
+    // Define pixel value array ( RBGA based pixel information )
     mapPixels = new sf::Uint8[MAP_HEIGHT * MAP_WIDTH * 4];
 
+    // Used to catch final delimited data in string
     bool dataValid = true;
+    // Raw pixel value
     double pixelData;
+    // Value of grey pixel when probability is not -1 or 1
     char greyVal;
+    // Tracks position of delimiter in string being parsed
     size_t pos = 0;
+
     std::string line, token;
     std::ifstream fd;
+
+    // Open map file
     fd.open(map_data.c_str(), std::ifstream::in);
 
     // Check to make sure file was successfully opened
@@ -71,19 +82,19 @@ void Visualizer::loadMap() {
                 mapPixels[pixelCount++] = OCCUPIED_R;
                 mapPixels[pixelCount++] = OCCUPIED_G;
                 mapPixels[pixelCount++] = OCCUPIED_B;
-                mapPixels[pixelCount++] = 255;
+
             } else if( pixelData == UNMAPPED ) {
                 mapPixels[pixelCount++] = UNMAPPED_R;
                 mapPixels[pixelCount++] = UNMAPPED_G;
                 mapPixels[pixelCount++] = UNMAPPED_B;
-                mapPixels[pixelCount++] = 255;
             } else {
                 greyVal = (char)(255.0*pixelData);
                 mapPixels[pixelCount++] = greyVal;
                 mapPixels[pixelCount++] = greyVal;
                 mapPixels[pixelCount++] = greyVal;
-                mapPixels[pixelCount++] = 255;
             }
+            // Set pixel alpha value
+            mapPixels[pixelCount++] = 255;
 
             // Remove data from string
             line.erase(0,pos+delimeter.size());
@@ -96,30 +107,73 @@ void Visualizer::loadMap() {
     mapTexture->update(mapPixels);
     // Load texture into sprite
     mapSprite->setTexture(*mapTexture);
-    //boost::thread thread(boost::bind(&Visualizer::window_thread,this));
-    // Join thread
-    //thread.join();
 }
 
 void Visualizer::renderThread() {
+    // Run while window is still open
     while( window->isOpen()) {
+        // Draw the map
         window->draw(*mapSprite);
+        // Draw all particles sprites
         for( int i = 0; i < NUM_PARTICLES; i++ ) {
             window->draw(arrowSprites[i]);
         }
+
+        if( _drawDot ) {
+            window->draw(*dotSprite);
+        }
+
+        // Display what is currently rendered
         window->display();
+
+        while( window->pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window->close();
+                break;
+            }
+
+            // Mouse button press event
+            if (event.type == sf::Event::MouseButtonPressed) {
+                std::cout << " X(" << event.mouseButton.x << ")";
+                std::cout << " YZ(" << event.mouseButton.y << ")" << std::endl;
+                break;
+            }
+        }
     }
 }
 
 void Visualizer::drawParticles(particle_t *X) {
+    // Iterate over all particles and add in arrow sprite
     for( int i = 0; i < NUM_PARTICLES; i++ ) {
         arrowSprites[i].setTexture(*arrowTexture);
-        arrowSprites[i].setOrigin(300,300);
-        arrowSprites[i].setRotation(X->theta);
-        arrowSprites[i].setPosition(X->y/PIXEL_RESOLUTION,X->x/PIXEL_RESOLUTION);
-        arrowSprites[i].setScale(0.035,0.035);
+        arrowSprites[i].setOrigin(ARROW_WIDTH/2,ARROW_HEIGHT/2);
+        arrowSprites[i].setRotation(X->theta*TO_DEGREES);
+        arrowSprites[i].setPosition(X->x/PIXEL_RESOLUTION + 1.0,X->y/PIXEL_RESOLUTION + 1.0);
+        arrowSprites[i].setScale(ARROW_SCALE_FACTOR,ARROW_SCALE_FACTOR);
+        // Move to next particle
         X++;
     }
+}
+
+void Visualizer::flagPixel(double x, double y) {
+    // sf::Uint8 p[4];
+    // p[0] = 255;
+    // p[1] = 0;
+    // p[2] = 0;
+    // p[3] = 255;
+    int px, py;
+    // Convert xy position to pixel value, correcting for pixels starting at (1,1)
+    // which equates to (0.0,0.0) in world coordinates
+    px = (x/PIXEL_RESOLUTION);
+    py = (y/PIXEL_RESOLUTION);
+
+    dotSprite = new sf::Sprite;
+    dotSprite->setTexture(*dotTexture);
+    dotSprite->setOrigin(100,100);
+    dotSprite->setPosition(px,py);
+    dotSprite->setScale(0.025,0.025);
+    _drawDot = true;
+    //(*mapTexture).update(&p[0],1,1,x,y);
 }
 
 void Visualizer::viewImage() {

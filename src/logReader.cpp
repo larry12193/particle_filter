@@ -28,18 +28,21 @@ LogReader::~LogReader() {
     }
 }
 
-uint8_t LogReader::increment(dataFrame_t *dataFrame) {
+int LogReader::increment(dataFrame_t *dataFrame) {
 
     // Get next line in file
-    if(std::getline(_fd,_line)) {
-        decodeDataLine(dataFrame);
+    if( !_fd.eof() ) {
+        std::getline(_fd,_line);
+        if( decodeDataLine(dataFrame) < 0 ) {
+            return -1;
+        };
         return 1;
     } else {
         return -1;
     }
 }
 
-void LogReader::decodeDataLine(dataFrame_t *dataFrame) {
+int LogReader::decodeDataLine(dataFrame_t *dataFrame) {
 
     // Process data by line identifier
     if( _line[0] == 'L' ) {
@@ -49,10 +52,11 @@ void LogReader::decodeDataLine(dataFrame_t *dataFrame) {
         _line.erase(0,delimeter.size() + 1);
         dataFrame->type = odometryData;
     } else {
-        perror("Encountered unknown data entry in log file, aborting.");
+        return -1;
+        //perror("Encountered unknown data entry in log file, aborting.");
     }
-
     lineDecoder(dataFrame);
+    return 1;
 }
 
 void LogReader::lineDecoder(dataFrame_t *dataFrame) {
@@ -80,7 +84,7 @@ void LogReader::lineDecoder(dataFrame_t *dataFrame) {
         token = _line.substr(0,pos);
 
         // Load data into current memory location
-        (*data) = std::atof(token.c_str());
+        (*data) = std::atof(token.c_str())*CM_TO_METERS;
         // Move to next memory location
         data++;
 

@@ -1,0 +1,13 @@
+0.1   # Odometry model a1
+0.05  # Odometry model a2
+0.01  # Odometry model a3
+0.01  # Odometry model a4
+20.0  # Laser hit mean (m)
+5.0   # Laser hit stdev (m)
+0.1   # Laser short lambda
+81.83 # Laser max range (m)
+1.0   # Laser random range prob
+0.2   # Laser short factor
+0.5   # Laser hit factor
+0.1   # Laser max factor
+0.2   # Laser rand factor

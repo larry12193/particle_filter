@@ -59,7 +59,7 @@ public:
      *  @return Void.
      */
     LogReader(std::string logFile);
-    
+
     /** @brief Deconstructor for LogReader classs
      *
      */
@@ -69,7 +69,7 @@ public:
      *
      *  @return Success, end of file, or error.
      */
-    uint8_t increment(dataFrame_t *dataFrame);
+    int increment(dataFrame_t *dataFrame);
 
 private:
 
@@ -78,7 +78,7 @@ private:
      *  @param logFile The location of the log file to be used
      *  @return Void.
      */
-    void decodeDataLine(dataFrame_t *dataFrame);
+    int decodeDataLine(dataFrame_t *dataFrame);
 
     /** @brief Decodes a line of odometry data
      *

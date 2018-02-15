@@ -14,23 +14,58 @@
 
 #include <string>
 
-#define PI  3.14159265359
-#define PI2 6.28318530718
+#define PI     3.14159265359
+#define PI2    6.28318530718
+#define ROOT2  1.41421356237
+#define CM_TO_METERS  0.01
+#define METER_TO_CM   100
+#define TO_DEGREES    180.0/PI
+#define TO_RADIANS    PI/180.0
 
-#define NUM_PARTICLES 100
+/**
+ * @brief Scale factor for arrow
+ */
+#define ARROW_SCALE_FACTOR 0.035
+
+/**
+ * @brief Pixel offset for arrow image
+ */
+#define ARROW_PIXEL_OFFSET 11
+
+/**
+ * @brief number of particles
+ */
+#define NUM_PARTICLES 1
 
 /**
  * @brief Pixel size resolution (cm)
  */
-#define PIXEL_RESOLUTION 10
+#define PIXEL_RESOLUTION 0.1
 
+/**
+ * @brief Map pixel height
+ */
 #define MAP_HEIGHT 800
+
+/**
+ * @brief Map pixel width
+ */
 #define MAP_WIDTH  800
 
-#define ARROW_WIDTH  600
+/**
+ * @brief Arrow pixel height
+ */
 #define ARROW_HEIGHT 600
 
-#define NUM_FREE 31284
+/**
+ * @brief Arrow pixel width
+ */
+#define ARROW_WIDTH  600
+
+/**
+ * @brief Pre-calculated number of open pixels on the map
+ */
+#define NUM_FREE_PARTICLES 31284
 
 /**
  * @brief Data log delimeter
@@ -42,18 +77,22 @@ static const std::string delimeter = " ";
 #define NUM_MEAS 180
 
 /**
- * @brief Laser offset forward from center of robot (cm)
+ * @brief Laser X offset forward from center of robot (m)
  */
-#define LASER_OFFSET_X 25
+#define LASER_OFFSET_X 0.25
+
+/**
+ * @brief Laser Y offset forward from center of robot (m)
+ */
 #define LASER_OFFSET_Y 0
 
 /**
  * @brief Probabilistic value associated with occupied, unoccupied, and
  *        unmapped values in the map
  */
-#define OCCUPIED 1.0
-#define UNOCCUPIED 0
-#define UNMAPPED -1.0
+#define UNOCCUPIED  1.0
+#define OCCUPIED    0
+#define UNMAPPED   -1.0
 
 /**
  * @brief Odometry entry column headers
