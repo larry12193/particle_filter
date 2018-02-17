@@ -35,12 +35,12 @@
 /**
  * @brief number of particles
  */
-#define NUM_PARTICLES 1
+#define NUM_PARTICLES 2000
 
 /**
  * @brief Pixel size resolution (cm)
  */
-#define PIXEL_RESOLUTION 0.1
+#define PIXEL_RESOLUTION 10
 
 /**
  * @brief Map pixel height
@@ -77,9 +77,9 @@ static const std::string delimeter = " ";
 #define NUM_MEAS 180
 
 /**
- * @brief Laser X offset forward from center of robot (m)
+ * @brief Laser X offset forward from center of robot (cm)
  */
-#define LASER_OFFSET_X 0.25
+#define LASER_OFFSET_X 25
 
 /**
  * @brief Laser Y offset forward from center of robot (m)

@@ -23,14 +23,15 @@
 #include <cmath>
 #include <math.h>
 #include <vector>
+#include <time.h>
 
 static const std::string open_data = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/data/map/open_map.dat";
 static const std::string noise_param = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/data/noiseData.dat";
 
-#define NUM_BINS       100
-#define SEARCH_DIST    0.25
-#define MAX_PIXEL      82
-
+#define NUM_BINS          100
+#define SEARCH_DIST       0.5
+#define RANGE_ANGLE_DELTA 10
+#define RANDOM_PARTICLES  50
 // #define DEBUG
 
 class ParticleFilter {
@@ -60,7 +61,7 @@ private:
      */
     void applyMotionModel();
 
-    void resampleParticles();
+    void lowVarResampleParticles();
 
     void reinitializeOdometryGaussians(double r1, double r2, double tr);
 
@@ -72,10 +73,7 @@ private:
 
     double generateThetaSample();
 
-    int generateResampledParticle(std::vector<double>* c);
-    int binarySearch(std::vector<double>* c, double x);
-
-    void calculateLaserNomralizers(double* zstar);
+    void calculateLaserNomralizers();
 
     double integrateGaussian(double* zstar);
     double evaluateGaussian(double eval);
@@ -84,6 +82,7 @@ private:
     double laserModelProb(double zmeas);
 
     void visualizeLaserModel();
+    double sample(double b);
 
 private:
 
@@ -111,7 +110,7 @@ private:
 
     std::default_random_engine*              _rngen;
     std::uniform_real_distribution<double>*  _distUni;
-
+    std::uniform_real_distribution<double>*  _distSamp;
     OdometryModel_t    _odomModel;
     LaserModel_t       _laserModel;
 

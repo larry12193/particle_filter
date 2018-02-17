@@ -13,6 +13,7 @@ Visualizer::Visualizer() {
 
     _drawDot = false;
     window = new sf::RenderWindow(sf::VideoMode(MAP_WIDTH, MAP_HEIGHT), "Particle Filter");
+
     mapTexture = new sf::Texture;
     mapTexture->create(MAP_WIDTH, MAP_HEIGHT);
     mapSprite  = new sf::Sprite;
@@ -23,6 +24,9 @@ Visualizer::Visualizer() {
 
     dotTexture = new sf::Texture;
     dotTexture->loadFromFile(dot_file);
+
+    blueTexture = new sf::Texture;
+    blueTexture->loadFromFile(blue_file);
 
     // Load map and interpret as pixel data
     loadMap();
@@ -121,6 +125,9 @@ void Visualizer::renderThread() {
 
         if( _drawDot ) {
             window->draw(*dotSprite);
+            for( int i = 0; i < NUM_MEAS; i++ ) {
+                window->draw(scanSprites[i]);
+            }
         }
 
         // Display what is currently rendered
@@ -145,11 +152,15 @@ void Visualizer::renderThread() {
 void Visualizer::drawParticles(particle_t *X) {
     // Iterate over all particles and add in arrow sprite
     for( int i = 0; i < NUM_PARTICLES; i++ ) {
-        arrowSprites[i].setTexture(*arrowTexture);
-        arrowSprites[i].setOrigin(ARROW_WIDTH/2,ARROW_HEIGHT/2);
-        arrowSprites[i].setRotation(X->theta*TO_DEGREES);
-        arrowSprites[i].setPosition(X->x/PIXEL_RESOLUTION + 1.0,X->y/PIXEL_RESOLUTION + 1.0);
-        arrowSprites[i].setScale(ARROW_SCALE_FACTOR,ARROW_SCALE_FACTOR);
+        // arrowSprites[i].setTexture(*arrowTexture);
+        // arrowSprites[i].setOrigin(ARROW_WIDTH/2,ARROW_HEIGHT/2);
+        // arrowSprites[i].setRotation(-X->theta*TO_DEGREES);
+        // arrowSprites[i].setPosition(X->x,(MAP_HEIGHT - X->y));
+        // arrowSprites[i].setScale(ARROW_SCALE_FACTOR,ARROW_SCALE_FACTOR);
+        arrowSprites[i].setTexture(*dotTexture);
+        arrowSprites[i].setOrigin(100,100);
+        arrowSprites[i].setPosition(X->x,MAP_HEIGHT-X->y);
+        arrowSprites[i].setScale(0.025,0.025);
         // Move to next particle
         X++;
     }
@@ -164,8 +175,8 @@ void Visualizer::flagPixel(double x, double y) {
     int px, py;
     // Convert xy position to pixel value, correcting for pixels starting at (1,1)
     // which equates to (0.0,0.0) in world coordinates
-    px = (x/PIXEL_RESOLUTION);
-    py = (y/PIXEL_RESOLUTION);
+    px = (x);
+    py = (y);
 
     dotSprite = new sf::Sprite;
     dotSprite->setTexture(*dotTexture);
@@ -174,6 +185,21 @@ void Visualizer::flagPixel(double x, double y) {
     dotSprite->setScale(0.025,0.025);
     _drawDot = true;
     //(*mapTexture).update(&p[0],1,1,x,y);
+}
+
+void Visualizer::drawScan(particle_t* X, double ranges[]) {
+    double th;
+    double x,y;
+    for(int i = 0; i < NUM_MEAS; i++ ){
+        th = ((double)i-90)*TO_RADIANS;
+        x = X->x + (ranges[i]/10.0)*cos(X->theta + th);
+        y = X->y + (ranges[i]/10.0)*sin(X->theta + th);
+
+        scanSprites[i].setTexture(*blueTexture);
+        scanSprites[i].setOrigin(300,300);
+        scanSprites[i].setPosition(x,MAP_HEIGHT-y);
+        scanSprites[i].setScale(0.005,0.005);
+    }
 }
 
 void Visualizer::viewImage() {

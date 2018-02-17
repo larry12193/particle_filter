@@ -84,7 +84,7 @@ void LogReader::lineDecoder(dataFrame_t *dataFrame) {
         token = _line.substr(0,pos);
 
         // Load data into current memory location
-        (*data) = std::atof(token.c_str())*CM_TO_METERS;
+        (*data) = std::atof(token.c_str());
         // Move to next memory location
         data++;
 
@@ -112,4 +112,5 @@ void LogReader::lineDecoder(dataFrame_t *dataFrame) {
     //     }
     //     std::cout << "Time = "<< dataFrame->laserData.time << std::endl;
     // }
+    // getchar();
 }

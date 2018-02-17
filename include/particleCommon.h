@@ -34,7 +34,8 @@ struct OdometryModel_t {
     double a3;
     double a4;
     GaussianNoiseModel_t transModel;
-    GaussianNoiseModel_t rotModel;
+    GaussianNoiseModel_t rotModel1;
+    GaussianNoiseModel_t rotModel2;
 };
 
 struct LaserModel_t {

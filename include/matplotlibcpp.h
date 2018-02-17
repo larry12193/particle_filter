@@ -37,6 +37,7 @@ struct _interpreter {
     PyObject *s_python_function_figure;
     PyObject *s_python_function_plot;
     PyObject *s_python_function_scatter;
+    PyObject *s_python_function_polar;
     PyObject *s_python_function_semilogx;
     PyObject *s_python_function_semilogy;
     PyObject *s_python_function_loglog;
@@ -138,6 +139,7 @@ private:
         s_python_function_figure = PyObject_GetAttrString(pymod, "figure");
         s_python_function_plot = PyObject_GetAttrString(pymod, "plot");
         s_python_function_scatter = PyObject_GetAttrString(pymod, "scatter");
+        s_python_function_polar = PyObject_GetAttrString(pymod, "polar");
         s_python_function_semilogx = PyObject_GetAttrString(pymod, "semilogx");
         s_python_function_semilogy = PyObject_GetAttrString(pymod, "semilogy");
         s_python_function_loglog = PyObject_GetAttrString(pymod, "loglog");
@@ -168,6 +170,7 @@ private:
             || !s_python_function_figure
             || !s_python_function_plot
             || !s_python_function_scatter
+            || !s_python_function_polar
             || !s_python_function_semilogx
             || !s_python_function_semilogy
             || !s_python_function_loglog
@@ -199,6 +202,7 @@ private:
             || !PyFunction_Check(s_python_function_figure)
             || !PyFunction_Check(s_python_function_plot)
             || !PyFunction_Check(s_python_function_scatter)
+            || !PyFunction_Check(s_python_function_polar)
             || !PyFunction_Check(s_python_function_semilogx)
             || !PyFunction_Check(s_python_function_semilogy)
             || !PyFunction_Check(s_python_function_loglog)
@@ -365,6 +369,33 @@ bool scatter(const std::vector<Numeric> &x, const std::vector<Numeric> &y)
 
     return res;
 }
+
+template<typename Numeric>
+bool polar(const std::vector<Numeric> &x, const std::vector<Numeric> &y)
+{
+    assert(x.size() == y.size());
+
+    // using numpy arrays
+    PyObject* xarray = get_array(x);
+    PyObject* yarray = get_array(y);
+
+    // construct positional args
+    PyObject* args = PyTuple_New(2);
+    PyTuple_SetItem(args, 0, xarray);
+    PyTuple_SetItem(args, 1, yarray);
+
+    // construct keyword args
+    PyObject* kwargs = PyDict_New();
+
+    PyObject* res = PyObject_Call(detail::_interpreter::get().s_python_function_polar, args, kwargs);
+
+    Py_DECREF(args);
+    Py_DECREF(kwargs);
+    if(res) Py_DECREF(res);
+
+    return res;
+}
+
 
 template<typename Numeric>
 bool stem(const std::vector<Numeric> &x, const std::vector<Numeric> &y, const std::map<std::string, std::string>& keywords)

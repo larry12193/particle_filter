@@ -36,6 +36,8 @@
 static const std::string map_data = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/data/map/wean2.dat";
 static const std::string arrow_file = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/arrow.png";
 static const std::string dot_file = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/reddot.png";
+static const std::string blue_file = "/home/lawrence/CMU/classes/localization/16833_hw1/particle_filter/bluedot.png";
+
 class Visualizer {
 
 public:
@@ -47,7 +49,7 @@ public:
     void viewImage();
 
     void flagPixel(double x, double y);
-
+    void drawScan(particle_t* X, double ranges[]);
 private:
 
     void loadMap();
@@ -65,6 +67,8 @@ private:
 
     sf::Texture*      dotTexture;
     sf::Sprite*       dotSprite;
+    sf::Texture*      blueTexture;
+    sf::Sprite        scanSprites[NUM_MEAS];
 
     sf::Thread*       figThread;
 
